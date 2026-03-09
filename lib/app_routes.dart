@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:base_flutter/screens/login_screen.dart';
+import 'package:base_flutter/screens/login_screens.dart';
 import 'package:base_flutter/screens/home_screen.dart';
 import 'package:base_flutter/screens/profile_screen.dart';
 
 class AppRoutes {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
+      case '/login':
+        return MaterialPageRoute(builder: (_) => const LoginScreen());
       case '/':
         return MaterialPageRoute(builder: (_) => const LoginScreen());
       case '/home':
