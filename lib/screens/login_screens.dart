@@ -24,7 +24,6 @@ class _LoginScreenState extends State<LoginScreen> {
           (route) => false,
           arguments: {
             'username': username,
-            'password': password,
           },
         );
       } else {

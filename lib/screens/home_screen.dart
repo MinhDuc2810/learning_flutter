@@ -4,12 +4,10 @@ import '../services/weather_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final String username;
-  final String password;
 
   const HomeScreen({
     super.key,
     required this.username,
-    required this.password,
   });
 
   @override
@@ -84,7 +82,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 '/profile',
                 arguments: {
                   'username': widget.username,
-                  'password': widget.password
                 },
               );
             },
@@ -99,11 +96,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: const Center(
                       child: Text(
                         'Notification',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      ),
+                    ),
                     content: Text('Bạn có chắc chắn muốn đăng xuất'),
                     actions: [
                       TextButton(

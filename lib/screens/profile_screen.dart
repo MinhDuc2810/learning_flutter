@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 
 class ProfileScreen extends StatelessWidget {
   final String username;
-  final String password;
 
   const ProfileScreen({
     super.key,
     required this.username,
-    required this.password,
   });
 
   @override
@@ -31,8 +29,6 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text('Username: $username'),
-            Text(
-                'Password: $password'), // Note: In a real app, don't show passwords!
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {

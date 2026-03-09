@@ -15,7 +15,6 @@ class AppRoutes {
         return MaterialPageRoute(
           builder: (_) => HomeScreen(
             username: args['username'] as String,
-            password: args['password'] as String,
           ),
         );
       case '/profile':
@@ -23,7 +22,6 @@ class AppRoutes {
         return MaterialPageRoute(
           builder: (_) => ProfileScreen(
             username: args['username'] as String,
-            password: args['password'] as String,
           ),
         );
       default:
