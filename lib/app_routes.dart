@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:base_flutter/screens/login_screens.dart';
 import 'package:base_flutter/screens/home_screen.dart';
 import 'package:base_flutter/screens/profile_screen.dart';
+import 'package:base_flutter/screens/forgot_password.dart';
+import 'package:base_flutter/screens/setting_screen.dart';
 
 class AppRoutes {
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -10,6 +12,10 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const LoginScreen());
       case '/':
         return MaterialPageRoute(builder: (_) => const LoginScreen());
+      case '/forgot_password':
+        return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
+      case '/setting':
+        return MaterialPageRoute(builder: (_) => const SettingScreen());
       case '/home':
         final args = settings.arguments as Map<String, dynamic>;
         return MaterialPageRoute(
