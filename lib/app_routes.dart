@@ -4,6 +4,7 @@ import 'package:base_flutter/screens/home_screen.dart';
 import 'package:base_flutter/screens/profile_screen.dart';
 import 'package:base_flutter/screens/forgot_password.dart';
 import 'package:base_flutter/screens/setting_screen.dart';
+import 'package:base_flutter/screens/course_detail_screen.dart';
 
 class AppRoutes {
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -28,6 +29,13 @@ class AppRoutes {
         return MaterialPageRoute(
           builder: (_) => ProfileScreen(
             username: args['username'] as String,
+          ),
+        );
+      case '/course_detail':
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => CourseDetailScreen(
+            courseId: args['courseId'] as String,
           ),
         );
       default:
