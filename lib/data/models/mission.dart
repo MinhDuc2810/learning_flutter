@@ -1,5 +1,6 @@
 class Mission {
   final String id;
+  final String instance;
   final String name;
   final String courseId;
   final String courseName;
@@ -7,14 +8,18 @@ class Mission {
   final int deadline; // Unix timestamp
   final String type; // e.g., 'quiz', 'assign', 'resource'
 
+  final String? url;
+
   Mission({
     required this.id,
+    required this.instance,
     required this.name,
     required this.courseId,
     required this.courseName,
     required this.state,
     this.deadline = 0,
     this.type = 'quiz',
+    this.url,
   });
 
   String get stateName {
@@ -36,12 +41,14 @@ class Mission {
   factory Mission.fromJson(Map<String, dynamic> json) {
     return Mission(
       id: json['cmid']?.toString() ?? '',
+      instance: json['instance']?.toString() ?? json['id']?.toString() ?? '',
       name: json['fullname'] ?? json['name'] ?? '',
       courseId: json['courseid']?.toString() ?? '',
       courseName: json['coursename'] ?? 'Khóa học',
       state: json['state'] ?? 0,
       deadline: json['deadline'] is int ? json['deadline'] : 0,
       type: json['modname'] ?? 'quiz',
+      url: json['url'],
     );
   }
 }

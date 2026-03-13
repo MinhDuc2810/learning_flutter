@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../data/models/course.dart';
 import '../../../theme/ons_color.dart';
+import '../../../utils/html_utils.dart';
 
 class CourseItem extends StatelessWidget {
   final Course course;
@@ -53,7 +54,7 @@ class CourseItem extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          course.fullname,
+                          HtmlUtils.stripHtml(course.fullname),
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -93,7 +94,7 @@ class CourseItem extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Giảng viên: ${course.instructorName}',
+                          'Giảng viên: ${HtmlUtils.stripHtml(course.instructorName)}',
                           style: const TextStyle(
                             color: Colors.grey,
                             fontSize: 14,

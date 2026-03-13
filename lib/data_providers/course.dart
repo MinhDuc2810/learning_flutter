@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:base_flutter/utils/ons_clients.dart';
 import 'package:http/http.dart' as http;
+import 'package:base_flutter/utils/logger.dart';
 
 const schoolnameCst = "bav";
 const baseUrl = "https://bavbomstg.onschool.edu.vn";
+
 
 class CourseAPI {
   static Future<Map<String, dynamic>> getCourseList() async {
@@ -24,6 +26,7 @@ class CourseAPI {
     url = "$url&moodlewsrestformat=json";
     url = "$url&courseid=$courseId";
     final response = await OnsClient.get(url);
+    logger("CourseAPI:detailCourse $url");
     return jsonDecode(response.body);
   }
 }

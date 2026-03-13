@@ -82,12 +82,14 @@ class CourseSection {
 
 class CourseModule {
   final int id;
+  final int instance;
   final String name;
   final String modname; // e.g. 'resource', 'quiz'
   final String? url;
 
   CourseModule({
     required this.id,
+    required this.instance,
     required this.name,
     required this.modname,
     this.url,
@@ -96,6 +98,7 @@ class CourseModule {
   factory CourseModule.fromJson(Map<String, dynamic> json) {
     return CourseModule(
       id: json['id'] ?? 0,
+      instance: json['instance'] ?? 0,
       name: json['name'] ?? '',
       modname: json['modname'] ?? '',
       url: json['url'],

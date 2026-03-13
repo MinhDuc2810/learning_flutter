@@ -10,6 +10,7 @@ class Course {
   final String? ngayThi;
   final double progress;
   final String? summary;
+  final String? slburl;
   final List<Teacher> teachers;
 
   Course({
@@ -21,6 +22,7 @@ class Course {
     this.startdate,
     this.enddate,
     this.ngayThi,
+    this.slburl,
     this.progress = 0,
     this.teachers = const [],
   });
@@ -35,7 +37,6 @@ class Course {
     if (teachers.isEmpty) return "Đang cập nhật";
     final t = teachers.first;
     // Format "LastName FirstName" or whatever the user prefers.
-    // Usually in VN it's Last Name + First Name
     return "${t.lastname} ${t.firstname}".trim();
   }
 
@@ -49,6 +50,7 @@ class Course {
       startdate: json['startdate'],
       enddate: json['enddate'],
       ngayThi: json['ngay_thi'],
+      slburl: json['slburl'],
       progress: (json['progress'] ?? 0).toDouble(),
       teachers: (json['teachers'] as List?)
               ?.map((t) => Teacher.fromJson(t))

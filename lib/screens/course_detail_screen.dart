@@ -5,6 +5,9 @@ import '../data_providers/mission.dart';
 import '../data/models/mission.dart';
 import './tabs/widgets/mission_item.dart';
 import '../theme/ons_color.dart';
+import '../utils/html_utils.dart';
+import '../utils/ons_webview.dart';
+import './forum_detail_screen.dart';
 
 class CourseDetailScreen extends StatefulWidget {
   final String courseId;
@@ -103,7 +106,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                   onPressed: () => Navigator.pop(context),
                 ),
                 title: innerBoxIsScrolled
-                    ? Text(course.fullname,
+                    ? Text(HtmlUtils.stripHtml(course.fullname),
                         style:
                             const TextStyle(color: Colors.white, fontSize: 18))
                     : null,
@@ -139,7 +142,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              course.fullname,
+                              HtmlUtils.stripHtml(course.fullname),
                               style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
@@ -227,9 +230,55 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
       padding: const EdgeInsets.all(16),
       itemCount: _courseMissions.length,
       itemBuilder: (context, index) {
+        final mission = _courseMissions[index];
         return MissionItem(
-          mission: _courseMissions[index],
+          mission: mission,
           showCourse: false,
+          onTap: () {
+            final cleanTitle = HtmlUtils.stripHtml(mission.name);
+            debugPrint('Tapped mission: ${mission.type}, name: $cleanTitle');
+            if (cleanTitle == 'Kế hoạch học tập') {
+              final slbUrl = _detail!.course.slburl;
+              if (slbUrl != null && slbUrl.isNotEmpty) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OnsWebview(
+                      url: slbUrl!,
+                      title: cleanTitle,
+                    ),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Không có đường dẫn kế hoạch học tập'),
+                  ),
+                );
+              }
+            } else if (mission.type.toLowerCase() == 'forum') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ForumDetailScreen(
+                    forumId: int.tryParse(mission.instance) ?? 0,
+                    forumName: cleanTitle,
+                  ),
+                ),
+              );
+            } else if (mission.url != null && mission.url!.isNotEmpty) {
+              // Xử lý các nhiệm vụ khác nếu có URL
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => OnsWebview(
+                    url: mission.url!,
+                    title: cleanTitle,
+                  ),
+                ),
+              );
+            }
+          },
         );
       },
     );
@@ -252,6 +301,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
   }
 
   Widget _buildOverviewTab() {
+    final course = _detail!.course;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -263,7 +313,24 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: () {},
+            onPressed: () {
+              if (course.slburl != null && course.slburl!.isNotEmpty) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OnsWebview(
+                      url: course.slburl!,
+                      title: 'Kế hoạch học tập',
+                    ),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Không có thông tin kế hoạch học tập')),
+                );
+              }
+            },
             icon: const Icon(Icons.calendar_today_outlined, size: 18),
             label: const Text('Kế hoạch học tập'),
             style: OutlinedButton.styleFrom(
@@ -313,17 +380,16 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
   String _getCourseDescription() {
     // 1. Try course summary
     if (_detail?.course.summary != null &&
-        _stripHtml(_detail!.course.summary!).isNotEmpty) {
-      return _stripHtml(_detail!.course.summary!);
+        HtmlUtils.stripHtml(_detail!.course.summary!).isNotEmpty) {
+      return HtmlUtils.stripHtml(_detail!.course.summary!);
     }
 
     // 2. Try first section (e.g., "General") summary
     if (_detail?.sections != null && _detail!.sections.isNotEmpty) {
       final section = _detail!.sections.first;
-      final desc = section.summaryStripped ??
-          (section.summary != null ? _stripHtml(section.summary!) : null);
-      if (desc != null && desc.trim().isNotEmpty) {
-        return desc.trim();
+      final rawDesc = section.summaryStripped ?? section.summary;
+      if (rawDesc != null && rawDesc.trim().isNotEmpty) {
+        return HtmlUtils.stripHtml(rawDesc);
       }
     }
 
@@ -384,7 +450,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(
             title: Text(
-              section.name,
+              HtmlUtils.stripHtml(section.name),
               style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -402,7 +468,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                   padding:
                       const EdgeInsets.only(bottom: 12, left: 16, right: 16),
                   child: Text(
-                    _stripHtml(
+                    HtmlUtils.stripHtml(
                         section.summaryStripped ?? section.summary ?? ""),
                     style: TextStyle(
                       color: Colors.grey[700],
@@ -416,11 +482,48 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                   leading: _getModuleIcon(module.modname),
                   title: Text(
-                    module.name,
+                    HtmlUtils.stripHtml(module.name),
                     style: const TextStyle(fontSize: 14, color: Colors.black87),
                   ),
                   onTap: () {
-                    // Handle module click
+                    final cleanName = HtmlUtils.stripHtml(module.name);
+                    debugPrint(
+                        'Tapped module: ${module.modname}, name: $cleanName');
+                    String? targetUrl;
+
+                    if (cleanName == 'Kế hoạch học tập') {
+                      targetUrl = _detail!.course.slburl;
+                    } else {
+                      targetUrl = module.url;
+                    }
+
+                    if (module.modname.toLowerCase() == 'forum') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ForumDetailScreen(
+                            forumId: module.instance,
+                            forumName: cleanName,
+                          ),
+                        ),
+                      );
+                    } else if (targetUrl != null && targetUrl.isNotEmpty) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OnsWebview(
+                            url: targetUrl!,
+                            title: cleanName,
+                          ),
+                        ),
+                      );
+                    } else if (cleanName == 'Kế hoạch học tập') {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Không có đường dẫn kế hoạch học tập'),
+                        ),
+                      );
+                    }
                   },
                 );
               }),
@@ -440,23 +543,11 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
         return const Icon(Icons.help_outline, color: Colors.blue);
       case 'assign':
         return const Icon(Icons.assignment_outlined, color: Colors.green);
+      case 'forum':
+        return const Icon(Icons.forum_outlined, color: Color(0xFF282A75));
       default:
         return const Icon(Icons.folder_open_outlined);
     }
-  }
-
-  String _stripHtml(String html) {
-    if (html.isEmpty) return "";
-    // Remove HTML tags
-    String result = html.replaceAll(RegExp(r'<[^>]*>'), '');
-    // Replace common HTML entities
-    result = result.replaceAll('&nbsp;', ' ');
-    result = result.replaceAll('&amp;', '&');
-    result = result.replaceAll('&quot;', '"');
-    result = result.replaceAll('&#39;', "'");
-    result = result.replaceAll('&lt;', '<');
-    result = result.replaceAll('&gt;', '>');
-    return result.trim();
   }
 }
 
