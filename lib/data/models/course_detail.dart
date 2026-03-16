@@ -86,6 +86,7 @@ class CourseModule {
   final String name;
   final String modname; // e.g. 'resource', 'quiz'
   final String? url;
+  final List<dynamic> contents;
 
   CourseModule({
     required this.id,
@@ -93,6 +94,7 @@ class CourseModule {
     required this.name,
     required this.modname,
     this.url,
+    this.contents = const [],
   });
 
   factory CourseModule.fromJson(Map<String, dynamic> json) {
@@ -102,6 +104,7 @@ class CourseModule {
       name: json['name'] ?? '',
       modname: json['modname'] ?? '',
       url: json['url'],
+      contents: json['contents'] ?? [],
     );
   }
 }

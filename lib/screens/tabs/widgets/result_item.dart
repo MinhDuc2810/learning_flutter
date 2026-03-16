@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/academic_result.dart';
+import '../../result_detail_screen.dart';
 
 class ResultItem extends StatefulWidget {
   final AcademicResult result;
@@ -80,7 +81,15 @@ class _ResultItemState extends State<ResultItem> {
                   children: [
                     InkWell(
                       onTap: () {
-                        // Navigate to detail
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ResultDetailScreen(
+                              courseId: widget.result.courseId,
+                              courseName: widget.result.courseName,
+                            ),
+                          ),
+                        );
                       },
                       child: const Text(
                         'Xem chi tiết',

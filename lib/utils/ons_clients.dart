@@ -13,16 +13,22 @@ void goToLogin() {
   navigationKey.currentState?.pushReplacementNamed("/login");
 }
 
-String buildAuthUrl(String url, String token) {
-  if (url.contains("?")) {
-    url = "$url&wstoken=$token";
-  } else {
-    url = "$url?wstoken=$token";
-  }
-  return url;
-}
-
 class OnsClient {
+  static String buildAuthUrl(String url, String token) {
+    final param =
+        url.contains("/webservice/pluginfile.php") ? "token" : "wstoken";
+    if (url.contains("?")) {
+      url = "$url&$param=$token";
+    } else {
+      url = "$url?$param=$token";
+    }
+    return url;
+  }
+
+  static String lmsPage(String token, String url) {
+    return "https://bavbomstg.onschool.edu.vn/login/redirect.php?token=$token&path=${Uri.encodeComponent(url)}";
+  }
+
   static Future get(String url,
       {Map<String, String>? headers, bool requiredAuth = true}) async {
     try {

@@ -8,6 +8,8 @@ import '../theme/ons_color.dart';
 import '../utils/html_utils.dart';
 import '../utils/ons_webview.dart';
 import './forum_detail_screen.dart';
+import './do_assign_screen.dart';
+import './h5p_screen.dart';
 
 class CourseDetailScreen extends StatefulWidget {
   final String courseId;
@@ -237,26 +239,27 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
           onTap: () {
             final cleanTitle = HtmlUtils.stripHtml(mission.name);
             debugPrint('Tapped mission: ${mission.type}, name: $cleanTitle');
+
             if (cleanTitle == 'Kế hoạch học tập') {
               final slbUrl = _detail!.course.slburl;
               if (slbUrl != null && slbUrl.isNotEmpty) {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => OnsWebview(
-                      url: slbUrl!,
-                      title: cleanTitle,
-                    ),
+                    builder: (context) =>
+                        OnsWebview(url: slbUrl, title: cleanTitle),
                   ),
                 );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Không có đường dẫn kế hoạch học tập'),
-                  ),
+                      content: Text('Không có đường dẫn kế hoạch học tập')),
                 );
               }
-            } else if (mission.type.toLowerCase() == 'forum') {
+              return;
+            }
+
+            if (mission.type.toLowerCase() == 'forum') {
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -266,15 +269,53 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                   ),
                 ),
               );
-            } else if (mission.url != null && mission.url!.isNotEmpty) {
-              // Xử lý các nhiệm vụ khác nếu có URL
+            } else if (mission.type.toLowerCase() == 'helpdesk') {
+              Navigator.pushNamed(
+                context,
+                '/hd72',
+                arguments: {
+                  'courseId': widget.courseId,
+                  'courseName': HtmlUtils.stripHtml(_detail!.course.fullname),
+                },
+              );
+            } else if (mission.type.toLowerCase() == 'assign') {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => OnsWebview(
+                  builder: (context) => DoAssignScreen(
+                    assignId: int.tryParse(mission.instance) ?? 0,
+                    assignName: cleanTitle,
+                  ),
+                ),
+              );
+            } else if (mission.type.toLowerCase() == 'hvp' &&
+                mission.url != null &&
+                mission.url!.isNotEmpty) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => H5PScreen(
                     url: mission.url!,
                     title: cleanTitle,
                   ),
+                ),
+              );
+            } else if (mission.type.toLowerCase() == 'resource' &&
+                mission.url != null &&
+                mission.url!.isNotEmpty) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      OnsWebview(url: mission.url!, title: cleanTitle),
+                ),
+              );
+            } else if (mission.url != null && mission.url!.isNotEmpty) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      OnsWebview(url: mission.url!, title: cleanTitle),
                 ),
               );
             }
@@ -489,12 +530,25 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                     final cleanName = HtmlUtils.stripHtml(module.name);
                     debugPrint(
                         'Tapped module: ${module.modname}, name: $cleanName');
-                    String? targetUrl;
 
                     if (cleanName == 'Kế hoạch học tập') {
-                      targetUrl = _detail!.course.slburl;
-                    } else {
-                      targetUrl = module.url;
+                      final slbUrl = _detail!.course.slburl;
+                      if (slbUrl != null && slbUrl.isNotEmpty) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                OnsWebview(url: slbUrl, title: cleanName),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content:
+                                  Text('Không có đường dẫn kế hoạch học tập')),
+                        );
+                      }
+                      return;
                     }
 
                     if (module.modname.toLowerCase() == 'forum') {
@@ -507,20 +561,61 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                           ),
                         ),
                       );
-                    } else if (targetUrl != null && targetUrl.isNotEmpty) {
+                    } else if (module.modname.toLowerCase() == 'helpdesk') {
+                      Navigator.pushNamed(
+                        context,
+                        '/hd72',
+                        arguments: {
+                          'courseId': widget.courseId,
+                          'courseName':
+                              HtmlUtils.stripHtml(_detail!.course.fullname),
+                        },
+                      );
+                    } else if (module.modname.toLowerCase() == 'assign') {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => OnsWebview(
-                            url: targetUrl!,
+                          builder: (context) => DoAssignScreen(
+                            assignId: module.instance,
+                            assignName: cleanName,
+                          ),
+                        ),
+                      );
+                    } else if (module.modname.toLowerCase() == 'hvp' &&
+                        module.url != null &&
+                        module.url!.isNotEmpty) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => H5PScreen(
+                            url: module.url!,
                             title: cleanName,
                           ),
                         ),
                       );
-                    } else if (cleanName == 'Kế hoạch học tập') {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Không có đường dẫn kế hoạch học tập'),
+                    } else if (module.modname.toLowerCase() == 'resource') {
+                      String targetUrl = module.url ?? "";
+                      if (module.contents.isNotEmpty &&
+                          module.contents.first['type'] == 'file') {
+                        targetUrl =
+                            module.contents.first['fileurl'] ?? targetUrl;
+                      }
+
+                      if (targetUrl.isNotEmpty) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                OnsWebview(url: targetUrl, title: cleanName),
+                          ),
+                        );
+                      }
+                    } else if (module.url != null && module.url!.isNotEmpty) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              OnsWebview(url: module.url!, title: cleanName),
                         ),
                       );
                     }
@@ -545,6 +640,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
         return const Icon(Icons.assignment_outlined, color: Colors.green);
       case 'forum':
         return const Icon(Icons.forum_outlined, color: Color(0xFF282A75));
+      case 'hvp':
+        return const Icon(Icons.play_circle_outline, color: Colors.purple);
+      case 'helpdesk':
+        return const Icon(Icons.help_center_outlined, color: Color(0xFF282A75));
       default:
         return const Icon(Icons.folder_open_outlined);
     }

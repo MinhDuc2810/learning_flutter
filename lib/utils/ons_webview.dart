@@ -1,11 +1,12 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../constants/storage_key.dart';
 import '../utils/local_storage.dart';
 import '../utils/logger.dart';
+import '../utils/ons_clients.dart';
+import '../data_providers/moodle_autologin.dart';
+import '../screens/pdf_view_screen.dart';
 
 class OnsWebview extends StatefulWidget {
   final String url;
@@ -21,6 +22,7 @@ class _OnsWebviewState extends State<OnsWebview> {
   late final WebViewController _controller;
   bool _isLoading = true;
   bool _isControllerInitialized = false;
+  String? _token;
 
   @override
   void initState() {
@@ -36,21 +38,46 @@ class _OnsWebviewState extends State<OnsWebview> {
     ].request();
   }
 
+  // Kiểm tra URL có phải là file PDF không
+  bool _isPdfUrl(String url) {
+    final lower = url.toLowerCase();
+    // Một URL PDF hợp lệ để xem trực tiếp (không qua WebView) thường chứa 'pluginfile.php'
+    // và kết thúc bằng .pdf (hoặc có .pdf trước dấu ?)
+    return (lower.contains('pluginfile.php') ||
+            lower.contains('/webservice/pluginfile.php')) &&
+        lower.contains('.pdf') &&
+        (lower.split('?').first.endsWith('.pdf') || lower.contains('.pdf?'));
+  }
+
+  // Phương thức hiển thị PDF cục bộ thông qua PDFViewScreen
+
   Future<void> _initController() async {
     try {
-      String? token = await LocalStorage.getString(StorageKey.token);
-      String finalUrl = widget.url;
+      _token = await LocalStorage.getString(StorageKey.token);
+      String initialUrl = widget.url;
+      String finalUrl;
 
-      if (token != null && token.isNotEmpty) {
-        if (finalUrl.contains('?')) {
-          finalUrl = '$finalUrl&wstoken=$token';
-        } else {
-          finalUrl = '$finalUrl?wstoken=$token';
-        }
+      if (_isPdfUrl(initialUrl)) {
+        // Nếu là PDF, sử dụng PDFViewScreen để hiển thị cục bộ
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PDFViewScreen(
+              url: OnsClient.buildAuthUrl(initialUrl, _token ?? ""),
+              title: widget.title ?? "Tài liệu PDF",
+            ),
+          ),
+        );
+        return;
+      } else {
+        // Nếu là nội dung Web (H5P, Forum, SCORM), dùng Autologin để có Session
+        finalUrl = await MoodleAutologinAPI.getAutologinUrl(initialUrl);
       }
 
       _controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setUserAgent(
+            "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36")
         ..setNavigationDelegate(
           NavigationDelegate(
             onPageStarted: (String url) {
@@ -62,9 +89,30 @@ class _OnsWebviewState extends State<OnsWebview> {
             onWebResourceError: (WebResourceError error) {
               logger('WebView Error: ${error.description}');
             },
+            onNavigationRequest: (NavigationRequest request) {
+              final url = request.url;
+              // Chặn URL PDF và chuyển sang PDFViewScreen
+              if (_isPdfUrl(url)) {
+                logger(
+                    'Phát hiện PDF trong navigation, mở PDFViewScreen: $url');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PDFViewScreen(
+                      url: OnsClient.buildAuthUrl(url, _token ?? ""),
+                      title: widget.title ?? "Tài liệu PDF",
+                    ),
+                  ),
+                );
+                return NavigationDecision.prevent;
+              }
+              return NavigationDecision.navigate;
+            },
           ),
         )
         ..loadRequest(Uri.parse(finalUrl));
+
+      logger('WebView Loading Request: $finalUrl');
 
       if (mounted) {
         setState(() {
