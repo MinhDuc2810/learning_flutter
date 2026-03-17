@@ -14,4 +14,14 @@ class TriggerAPI {
     logger("TriggerAPI:viewAssign $url");
     return jsonDecode(response.body);
   }
+
+  static Future viewQuiz({required int quizId}) async {
+    String url = "$baseUrl/webservice/rest/server.php";
+    url = "$url?wsfunction=mod_quiz_view_quiz";
+    url = "$url&moodlewsrestformat=json";
+    url = "$url&quizid=$quizId";
+    final response = await OnsClient.get(url);
+    logger("TriggerAPI:viewQuiz $url");
+    return jsonDecode(response.body);
+  }
 }

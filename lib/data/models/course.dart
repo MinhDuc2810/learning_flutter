@@ -33,6 +33,8 @@ class Course {
     return "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
   }
 
+  Teacher? get teacher => teachers.isNotEmpty ? teachers.first : null;
+
   String get instructorName {
     if (teachers.isEmpty) return "Đang cập nhật";
     final t = teachers.first;

@@ -29,4 +29,14 @@ class CourseAPI {
     logger("CourseAPI:detailCourse $url");
     return jsonDecode(response.body);
   }
+
+  static Future getLanguage({required String courseId}) async {
+    String url = "$baseUrl/webservice/rest/server.php";
+    url = "$url?wsfunction=core_course_get_course_module_by_instance";
+    url = "$url&moodlewsrestformat=json";
+    // Usually language is not a separate API call in Moodle core, 
+    // but the flow requires it. Returning a mock/default for now 
+    // or we might need it for rendering.
+    return {"lang": "vi"};
+  }
 }

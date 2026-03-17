@@ -10,6 +10,7 @@ import '../utils/ons_webview.dart';
 import './forum_detail_screen.dart';
 import './do_assign_screen.dart';
 import './h5p_screen.dart';
+import './quiz_history_screen.dart';
 
 class CourseDetailScreen extends StatefulWidget {
   final String courseId;
@@ -259,7 +260,23 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
               return;
             }
 
-            if (mission.type.toLowerCase() == 'forum') {
+            if (mission.type.toLowerCase() == 'quiz') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuizHistoryScreen(
+                    quizId: int.tryParse(mission.instance) ?? 0,
+                    courseId: widget.courseId,
+                    quizName: cleanTitle,
+                    courseName: HtmlUtils.stripHtml(_detail!.course.fullname),
+                    instructorName: _detail!.teachers.isNotEmpty 
+                        ? "${_detail!.teachers.first.lastname} ${_detail!.teachers.first.firstname}".trim()
+                        : _detail!.course.instructorName,
+                    quizTeacher: _detail!.course.teacher,
+                  ),
+                ),
+              );
+            } else if (mission.type.toLowerCase() == 'forum') {
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -570,6 +587,22 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                           'courseName':
                               HtmlUtils.stripHtml(_detail!.course.fullname),
                         },
+                      );
+                    } else if (module.modname.toLowerCase() == 'quiz') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => QuizHistoryScreen(
+                            quizId: module.instance,
+                            courseId: widget.courseId,
+                            quizName: cleanName,
+                            courseName: HtmlUtils.stripHtml(_detail!.course.fullname),
+                            instructorName: _detail!.teachers.isNotEmpty 
+                                ? "${_detail!.teachers.first.lastname} ${_detail!.teachers.first.firstname}".trim()
+                                : _detail!.course.instructorName,
+                            quizTeacher: _detail!.course.teacher,
+                          ),
+                        ),
                       );
                     } else if (module.modname.toLowerCase() == 'assign') {
                       Navigator.push(

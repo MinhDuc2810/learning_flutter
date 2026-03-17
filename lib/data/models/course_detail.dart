@@ -16,12 +16,16 @@ class CourseDetail {
   });
 
   factory CourseDetail.fromJson(Map<String, dynamic> json) {
+    final teachers = (json['teacher'] as List?)
+            ?.map((t) => Teacher.fromJson(t))
+            .toList() ??
+        [];
     return CourseDetail(
-      course: Course.fromJson(json['course'] ?? {}),
-      teachers: (json['teacher'] as List?)
-              ?.map((t) => Teacher.fromJson(t))
-              .toList() ??
-          [],
+      course: Course.fromJson({
+        ...(json['course'] ?? {}),
+        'teachers': json['teacher'],
+      }),
+      teachers: teachers,
       qlht: json['qlht'] ?? [],
       students: (json['student'] as List?)
               ?.map((s) => CourseStudent.fromJson(s))
