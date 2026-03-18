@@ -132,6 +132,22 @@ class _DoAssignScreenState extends State<DoAssignScreen> {
     final lastAttempt = grade?['lastattempt'];
     final info = _statusData?['info'];
 
+    bool isOverdue = false;
+    if (info != null && info['duedate'] != null) {
+      int dueDateSeconds = 0;
+      if (info['duedate'] is int) {
+        dueDateSeconds = info['duedate'];
+      } else if (info['duedate'] is String) {
+        dueDateSeconds = int.tryParse(info['duedate']) ?? 0;
+      }
+      if (dueDateSeconds > 0) {
+        final dueDate = DateTime.fromMillisecondsSinceEpoch(dueDateSeconds * 1000);
+        if (DateTime.now().isAfter(dueDate)) {
+          isOverdue = true;
+        }
+      }
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -251,12 +267,12 @@ class _DoAssignScreenState extends State<DoAssignScreen> {
                           fileSize: _formatFileSize(file['filesize'] ?? 0),
                           onDownload: () =>
                               _handleOpenDownload(file['fileurl'] ?? ""),
-                          onDelete: () => _handleDeleteFile(
+                          onDelete: isOverdue ? null : () => _handleDeleteFile(
                             filename: file['filename'] ?? "",
                             // fileid có trong lastattempt.files!
                             fileId: file['fileid'] ?? 0,
                           ),
-                          onReplace: () => _handleUpload(
+                          onReplace: isOverdue ? null : () => _handleUpload(
                             fileIdToReplace: file['fileid'] is int
                                 ? file['fileid']
                                 : int.tryParse(file['fileid'].toString()),
@@ -280,19 +296,19 @@ class _DoAssignScreenState extends State<DoAssignScreen> {
                     _buildFileItem(
                       fileName: _selectedFile!.name,
                       fileSize: _formatFileSize(_selectedFile!.size),
-                      onDelete: () => setState(() => _selectedFile = null),
+                      onDelete: isOverdue ? null : () => setState(() => _selectedFile = null),
                     ),
                   ],
                   const SizedBox(height: 24),
                   SizedBox(
                     width: 160,
                     child: ElevatedButton.icon(
-                      onPressed: _handleUpload,
+                      onPressed: isOverdue ? null : _handleUpload,
                       icon: const Icon(Icons.upload, size: 20),
                       label: const Text("Tải file lên"),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFF5F5F5),
-                        foregroundColor: Colors.black,
+                        foregroundColor: isOverdue ? Colors.grey : Colors.black,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -307,10 +323,10 @@ class _DoAssignScreenState extends State<DoAssignScreen> {
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ElevatedButton(
-          onPressed: _isSubmitting ? null : _handleSubmit,
+          onPressed: (_isSubmitting || isOverdue) ? null : _handleSubmit,
           style: ElevatedButton.styleFrom(
             backgroundColor:
-                _isSubmitting ? Colors.grey : const Color(0xFF282A75),
+                (_isSubmitting || isOverdue) ? Colors.grey : const Color(0xFF282A75),
             minimumSize: const Size(double.infinity, 50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -323,9 +339,9 @@ class _DoAssignScreenState extends State<DoAssignScreen> {
                   child: CircularProgressIndicator(
                       color: Colors.white, strokeWidth: 2),
                 )
-              : const Text(
-                  "Nộp bài",
-                  style: TextStyle(color: Colors.white, fontSize: 16),
+              : Text(
+                  isOverdue ? "Đã quá hạn nộp bài" : "Nộp bài",
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
                 ),
         ),
       ),
@@ -639,17 +655,18 @@ class _DoAssignScreenState extends State<DoAssignScreen> {
   }
 
   Widget _buildFileAction(IconData icon, String label, VoidCallback? onTap) {
+    final color = onTap == null ? Colors.grey.shade400 : Colors.grey.shade700;
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4.0),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: Colors.grey.shade700),
+            Icon(icon, size: 20, color: color),
             const SizedBox(width: 4),
             Text(
               label,
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+              style: TextStyle(color: color, fontSize: 14),
             ),
           ],
         ),
