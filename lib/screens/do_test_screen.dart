@@ -34,7 +34,7 @@ class _DoTestScreenState extends State<DoTestScreen> {
   int _remainingSeconds = 0;
   int? _currentAttemptId;
   int? _courseId;
-  
+
   // Track if there's an ongoing save operation
   Future<void>? _pendingSave;
 
@@ -63,7 +63,7 @@ class _DoTestScreenState extends State<DoTestScreen> {
       if (_currentAttemptId == null) {
         final history = await QuizAPI.historyQuiz(quizId: widget.quizId);
         final attempts = history['attempts'] as List? ?? [];
-        
+
         final activeAttempt = attempts.firstWhere(
           (a) => a['state'] == 'inprogress' || a['state'] == 'overdue',
           orElse: () => null,
@@ -79,27 +79,30 @@ class _DoTestScreenState extends State<DoTestScreen> {
         }
       }
 
-      if (_currentAttemptId == null) throw Exception("Could not get attempt ID");
+      if (_currentAttemptId == null)
+        throw Exception("Could not get attempt ID");
 
       final response = await QuizAPI.quizContent(
         attemptId: _currentAttemptId!,
       );
-      
+
       final questions = response['questions'] as List? ?? [];
 
       try {
-        final serverData = await QuizServerAPI.getAttempt(attemptid: _currentAttemptId!.toString());
+        final serverData = await QuizServerAPI.getAttempt(
+            attemptid: _currentAttemptId!.toString());
         if (serverData != null) {
           final serverMap = serverData as Map<String, dynamic>;
-          
+
           for (var q in questions) {
             final slot = q['slot'].toString();
-            
+
             if (serverMap.containsKey(slot)) {
               final slotData = serverMap[slot] as Map<String, dynamic>? ?? {};
-              
+
               // Lấy answer
-              final answers = slotData['answers'] as Map<String, dynamic>? ?? {};
+              final answers =
+                  slotData['answers'] as Map<String, dynamic>? ?? {};
               if (answers.containsKey('-1')) {
                 dynamic val = answers['-1'];
                 int savedIndex = -1;
@@ -108,7 +111,7 @@ class _DoTestScreenState extends State<DoTestScreen> {
                 } else if (val is int) {
                   savedIndex = val;
                 }
-                
+
                 if (savedIndex != -1) {
                   final options = q['answertext'] as List? ?? [];
                   if (savedIndex >= 0 && savedIndex < options.length) {
@@ -117,7 +120,7 @@ class _DoTestScreenState extends State<DoTestScreen> {
                   }
                 }
               }
-              
+
               // Lấy flag
               final flagged = slotData['flagged'];
               if (flagged == true || flagged == 1 || flagged == "true") {
@@ -131,9 +134,10 @@ class _DoTestScreenState extends State<DoTestScreen> {
       }
 
       if (_courseId == null && response['attempt']?['quiz'] != null) {
-        _courseId = int.tryParse(response['attempt']['quiz']['course'].toString());
+        _courseId =
+            int.tryParse(response['attempt']['quiz']['course'].toString());
       }
-      
+
       if (_courseId != null) {
         await CourseAPI.detailCourse(courseId: _courseId.toString());
       }
@@ -166,9 +170,9 @@ class _DoTestScreenState extends State<DoTestScreen> {
         setState(() {
           _remainingSeconds--;
         });
-        
+
         if (_remainingSeconds == 30) {
-           _checkStatus();
+          _checkStatus();
         }
       } else {
         timer.cancel();
@@ -214,9 +218,11 @@ class _DoTestScreenState extends State<DoTestScreen> {
           title: const Text("Xác nhận nộp bài"),
           content: const Text("Bạn có chắc chắn muốn nộp bài?"),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Hủy")),
             TextButton(
-              onPressed: () => Navigator.pop(context, true), 
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Hủy")),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
               child: const Text("Nộp bài", style: TextStyle(color: Colors.red)),
             ),
           ],
@@ -230,24 +236,33 @@ class _DoTestScreenState extends State<DoTestScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await QuizServerAPI.submitAttempt(attemptid: _currentAttemptId!.toString());
+      final attemptUniqueId = _data!['attempt']?['uniqueid'];
+      if (attemptUniqueId == null) {
+        throw Exception("Không tìm thấy uniqueid của bài thi.");
+      }
 
       final questions = _data!['questions'] as List? ?? [];
       List<Map<String, String>> dataAns = [];
-      
+
       for (var q in questions) {
         final slot = q['slot'];
-        final uniqueid = q['id'];
+
         final chosenIndexStr = q['chosenIndex']?.toString();
+        // Fallback to chosenid if chosenIndex is null, matching the old logic structure but guaranteeing a value if possible
         final valueToSend = chosenIndexStr ?? (q['chosenid']?.toString() ?? "");
-        
+
+        // Moodle sẽ bắt lỗi nếu gửi lên `_answer` rỗng (đối với câu hỏi chưa trả lời). Do đó chỉ gửi khi có giá trị.
+        if (valueToSend.isNotEmpty) {
+          dataAns.add({
+            "name": "q$attemptUniqueId:${slot}_answer",
+            "value": valueToSend
+          });
+        }
+
         dataAns.add({
-          "name": "q$uniqueid:${slot}_answer",
-          "value": valueToSend
-        });
-        dataAns.add({
-          "name": "q$uniqueid:${slot}_:sequencecheck",
-          "value": "1"
+          "name": "q$attemptUniqueId:${slot}_:sequencecheck",
+          // An toàn hơn: Lấy sequencecheck từ dữ liệu câu hỏi (nếu Moodle trả về), tránh bị Moodle reject do hardcode "1"
+          "value": q['sequencecheck']?.toString() ?? "1"
         });
       }
 
@@ -259,10 +274,7 @@ class _DoTestScreenState extends State<DoTestScreen> {
       List<Map<String, String>> flagData = [];
       for (var q in questions) {
         if (q['flagged'] == 1 || q['flagged'] == true) {
-           flagData.add({
-             "slot": q['slot'].toString(),
-             "flagged": "1"
-           });
+          flagData.add({"slot": q['slot'].toString(), "flagged": "1"});
         }
       }
       if (flagData.isNotEmpty) {
@@ -288,7 +300,7 @@ class _DoTestScreenState extends State<DoTestScreen> {
 
     final questions = _data!['questions'] as List? ?? [];
     final qIndex = questions.indexWhere((q) => q['slot'] == slot);
-    
+
     if (qIndex != -1) {
       setState(() {
         questions[qIndex]['chosenid'] = optionId;
@@ -319,16 +331,17 @@ class _DoTestScreenState extends State<DoTestScreen> {
 
   Future<void> _toggleFlag(int slot) async {
     if (_data == null || _currentAttemptId == null) return;
-    
+
     final questions = _data!['questions'] as List? ?? [];
     final qIndex = questions.indexWhere((q) => q['slot'] == slot);
-    
+
     if (qIndex != -1) {
-      final bool currentFlag = questions[qIndex]['flagged'] == 1 || questions[qIndex]['flagged'] == true;
+      final bool currentFlag = questions[qIndex]['flagged'] == 1 ||
+          questions[qIndex]['flagged'] == true;
       setState(() {
         questions[qIndex]['flagged'] = currentFlag ? 0 : 1;
       });
-      
+
       try {
         await QuizServerAPI.flagQuestion(
           attemptid: _currentAttemptId!.toString(),
@@ -358,7 +371,10 @@ class _DoTestScreenState extends State<DoTestScreen> {
             children: [
               const Text(
                 "Danh sách câu hỏi",
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
               Flexible(
@@ -372,14 +388,23 @@ class _DoTestScreenState extends State<DoTestScreen> {
                   itemCount: questions.length,
                   itemBuilder: (context, index) {
                     final q = questions[index];
-                    final bool isAnswered = q['chosenid'] != null && q['chosenid'] != 0 && q['chosenid'] != "" && q['chosenid'] != "0";
-                    final bool isFlagged = q['flagged'] == 1 || q['flagged'] == true;
+                    final bool isAnswered = q['chosenid'] != null &&
+                        q['chosenid'] != 0 &&
+                        q['chosenid'] != "" &&
+                        q['chosenid'] != "0";
+                    final bool isFlagged =
+                        q['flagged'] == 1 || q['flagged'] == true;
 
                     return Container(
                       decoration: BoxDecoration(
-                        color: isAnswered ? const Color(0xFF66BB6A) : Colors.white12,
+                        color: isAnswered
+                            ? const Color(0xFF66BB6A)
+                            : Colors.white12,
                         borderRadius: BorderRadius.circular(8),
-                        border: isFlagged ? Border.all(color: const Color(0xFFFFD600), width: 2) : null,
+                        border: isFlagged
+                            ? Border.all(
+                                color: const Color(0xFFFFD600), width: 2)
+                            : null,
                       ),
                       child: Center(
                         child: Text(
@@ -430,12 +455,15 @@ class _DoTestScreenState extends State<DoTestScreen> {
             onPressed: _handleExit,
           ),
         ),
-        body: Center(child: Padding(
+        body: Center(
+            child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(_error!, style: const TextStyle(color: Colors.white), textAlign: TextAlign.center),
+              Text(_error!,
+                  style: const TextStyle(color: Colors.white),
+                  textAlign: TextAlign.center),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
@@ -458,7 +486,10 @@ class _DoTestScreenState extends State<DoTestScreen> {
     int flaggedCount = 0;
     for (var q in questions) {
       final chosenId = q['chosenid'];
-      if (chosenId != null && chosenId != 0 && chosenId != "" && chosenId != "0") {
+      if (chosenId != null &&
+          chosenId != 0 &&
+          chosenId != "" &&
+          chosenId != "0") {
         answeredCount++;
       }
       if (q['flagged'] == 1 || q['flagged'] == true) {
@@ -490,7 +521,11 @@ class _DoTestScreenState extends State<DoTestScreen> {
               const Center(
                 child: Padding(
                   padding: EdgeInsets.only(right: 8.0),
-                  child: SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)),
+                  child: SizedBox(
+                      width: 15,
+                      height: 15,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white70)),
                 ),
               ),
             IconButton(
@@ -531,7 +566,8 @@ class _DoTestScreenState extends State<DoTestScreen> {
           const SizedBox(height: 4),
           Text(
             _formatTime(_remainingSeconds),
-            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           Row(
@@ -539,18 +575,25 @@ class _DoTestScreenState extends State<DoTestScreen> {
             children: [
               Text(
                 "Tiến độ:",
-                style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 15),
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.9), fontSize: 15),
               ),
               Row(
                 children: [
                   Text(
                     "$answered/$total",
-                    style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(width: 8),
-                  const Icon(Icons.bookmark, color: Color(0xFFFFD600), size: 20),
+                  const Icon(Icons.bookmark,
+                      color: Color(0xFFFFD600), size: 20),
                   const SizedBox(width: 4),
-                  Text("$flagged", style: const TextStyle(color: Colors.white70, fontSize: 15)),
+                  Text("$flagged",
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 15)),
                 ],
               ),
             ],
@@ -580,19 +623,22 @@ class _DoTestScreenState extends State<DoTestScreen> {
         children: [
           Text(
             "Câu $questionNumber:",
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
+            style: const TextStyle(
+                fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
           ),
           const SizedBox(height: 8),
           Text(
             questionText,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black, height: 1.4),
+            style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+                height: 1.4),
           ),
           const SizedBox(height: 24),
-          
-          ...options.asMap().entries.map((entry) => _buildOptionRow(entry.value, slot, currentSelection, entry.key)),
-          
+          ...options.asMap().entries.map((entry) =>
+              _buildOptionRow(entry.value, slot, currentSelection, entry.key)),
           const SizedBox(height: 20),
-          
           InkWell(
             onTap: () => _toggleFlag(slot),
             child: Row(
@@ -619,11 +665,12 @@ class _DoTestScreenState extends State<DoTestScreen> {
     );
   }
 
-  Widget _buildOptionRow(Map<String, dynamic> opt, int slot, dynamic currentSelection, int optionIndex) {
+  Widget _buildOptionRow(Map<String, dynamic> opt, int slot,
+      dynamic currentSelection, int optionIndex) {
     final String optionId = opt['id']?.toString() ?? "";
     final String selectedId = currentSelection?.toString() ?? "";
     final bool isSelected = optionId.isNotEmpty && optionId == selectedId;
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: InkWell(
@@ -637,22 +684,27 @@ class _DoTestScreenState extends State<DoTestScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? const Color(0xFF66BB6A) : Colors.grey.shade400,
+                  color: isSelected
+                      ? const Color(0xFF66BB6A)
+                      : Colors.grey.shade400,
                   width: 1.5,
                 ),
-                color: isSelected ? const Color(0xFF66BB6A) : Colors.transparent,
+                color:
+                    isSelected ? const Color(0xFF66BB6A) : Colors.transparent,
               ),
-              child: isSelected ? const Center(child: Icon(Icons.circle, size: 10, color: Colors.white)) : null,
+              child: isSelected
+                  ? const Center(
+                      child: Icon(Icons.circle, size: 10, color: Colors.white))
+                  : null,
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 HtmlUtils.stripHtml(opt['answer'] ?? ""),
                 style: TextStyle(
-                  fontSize: 15, 
-                  color: Colors.black, 
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w400
-                ),
+                    fontSize: 15,
+                    color: Colors.black,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w400),
               ),
             ),
           ],
@@ -672,7 +724,8 @@ class _DoTestScreenState extends State<DoTestScreen> {
           Expanded(
             child: TextButton(
               onPressed: _showQuestionList,
-              child: const Text("Danh sách câu hỏi", style: TextStyle(color: Colors.white, fontSize: 16)),
+              child: const Text("Danh sách câu hỏi",
+                  style: TextStyle(color: Colors.white, fontSize: 16)),
             ),
           ),
           const SizedBox(width: 16),
@@ -682,9 +735,14 @@ class _DoTestScreenState extends State<DoTestScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF03A9F4),
                 minimumSize: const Size(0, 52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text("Nộp bài", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              child: const Text("Nộp bài",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold)),
             ),
           ),
         ],
